@@ -1,0 +1,55 @@
+# Weed-YOLOv12 🚀, AGPL-3.0 license
+# Weed-YOLOv12-lite: Weed-YOLOv12 with the backbone P5 stage removed as well (DEAL-YOLO style, cf. yolov8-ASF-P2P2.yaml)
+# Backbone stops at P4, the top-down path starts from the P4 A2C2f. Optional extra for the "keep backbone P5?" question
+# Ablation tags: [P234 + SSFF + LD, no backbone P5]
+
+# Parameters
+nc: 80 # number of classes (overridden by the dataset yaml)
+scales: # model compound scaling constants, i.e. 'model=weed-yolov12n-lite.yaml' will call weed-yolov12-lite.yaml with scale 'n'
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024]
+  s: [0.50, 0.50, 1024]
+  m: [0.50, 1.00, 512]
+  l: [1.00, 1.00, 512]
+  x: [1.00, 1.50, 512]
+
+# Weed-YOLOv12-lite backbone (YOLO12-turbo backbone up to P4, stride-2 Conv -> LDConv)
+backbone:
+  # [from, repeats, module, args]       LDConv args: [c2, num_param, stride]
+  - [-1, 1, LDConv, [64, 3, 2]] # 0-P1/2
+  - [-1, 1, LDConv, [128, 3, 2]] # 1-P2/4
+  - [-1, 2, C3k2, [256, False, 0.25]] # 2 (early P2 feature)
+  - [-1, 1, LDConv, [256, 3, 2]] # 3-P3/8
+  - [-1, 2, C3k2, [512, False, 0.25]] # 4
+  - [-1, 1, LDConv, [512, 3, 2]] # 5-P4/16
+  - [-1, 4, A2C2f, [512, True, 4]] # 6
+
+# Weed-YOLOv12-lite head
+head:
+  # top-down
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 7
+  - [[-1, 4], 1, Concat, [1]] # 8 cat backbone P3
+  - [-1, 2, A2C2f, [256, False, -1]] # 9
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 10
+  - [[-1, 2], 1, Concat, [1]] # 11 cat backbone P2
+  - [-1, 2, C3k2, [128, False]] # 12 (P2/4-xsmall) C3k2 instead of A2C2f on the 160x160 map
+
+  # bottom-up
+  - [-1, 1, LDConv, [128, 3, 2]] # 13
+  - [[-1, 9], 1, Concat, [1]] # 14 cat head P3
+  - [-1, 2, A2C2f, [256, False, -1]] # 15 (P3/8-small)
+
+  - [-1, 1, LDConv, [256, 3, 2]] # 16
+  - [[-1, 6], 1, Concat, [1]] # 17 cat backbone P4
+  - [-1, 2, A2C2f, [512, False, -1]] # 18 (P4/16-medium)
+
+  # SSFF: fuse the three neck outputs at each head resolution, then add to that head's input
+  - [[12, 15, 18], 1, ScalSeq, [128]] # 19 SSFF @P2
+  - [[12, -1], 1, Add, []] # 20 P2 + SSFF
+  - [[15, 12, 18], 1, ScalSeq, [256]] # 21 SSFF @P3
+  - [[15, -1], 1, Add, []] # 22 P3 + SSFF
+  - [[18, 12, 15], 1, ScalSeq, [512]] # 23 SSFF @P4
+  - [[18, -1], 1, Add, []] # 24 P4 + SSFF
+
+  - [[20, 22, 24], 1, Detect, [nc]] # Detect(P2, P3, P4)

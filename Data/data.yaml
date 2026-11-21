@@ -1,0 +1,12 @@
+# USU-Corn-WeedDB, 640x640 tiles, 3 weed species
+# No `path:` key on purpose: the dataset root is then the folder this file sits in (Data/), wherever the repo is
+# cloned. A relative `path:` (e.g. ./Data) would instead be resolved against Ultralytics' global datasets_dir.
+# train.py / val.py pass this file by absolute path, which this relies on.
+train: images/train
+val: images/val
+test: images/test
+nc: 3
+names:
+  0: CL  # common lambsquarters (Chenopodium album)
+  1: RPW # redroot pigweed (Amaranthus retroflexus)
+  2: GFT # green foxtail (Setaria viridis)

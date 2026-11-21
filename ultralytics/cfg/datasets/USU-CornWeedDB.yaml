@@ -1,0 +1,22 @@
+# Weed-YOLOv12 🚀, AGPL-3.0 license
+# USU-Corn-WeedDB: UAV weed detection in forage corn (Cache Valley, Utah), https://arxiv.org/abs/2606.06709
+# Data: https://zenodo.org/records/20044178 (USU-Corn-WeedDB.zip, CC-BY-4.0)
+# 800 annotated 640x640 tiles (~10 m AGL, GSD ~0.48 cm/px), 10,539 boxes, 3 weed species (+ 8,000 unlabeled tiles)
+# Example usage: yolo train data=USU-CornWeedDB.yaml model=weed-yolov12n.yaml iou_type=WIoU nwd=True
+#
+# TODO before training:
+#   1. Point `path` to the extracted dataset and set the split folders below (YOLO txt labels next to images/).
+#   2. CHECK THE CLASS ORDER: the names below are the three species from the paper abstract, but the class-index
+#      order of the released labels is not stated there. Match them to the dataset's own class file.
+
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: ../datasets/USU-CornWeedDB # dataset root dir
+train: images/train # train images (relative to 'path')
+val: images/val # val images (relative to 'path')
+test: images/test # test images (optional)
+
+# Classes
+names:
+  0: common_lambsquarters # Chenopodium album
+  1: redroot_pigweed # Amaranthus retroflexus
+  2: green_foxtail # Setaria viridis
